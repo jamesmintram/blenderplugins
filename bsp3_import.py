@@ -156,7 +156,7 @@ def read_some_data(context, filepath, scale_factor):
 # ImportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import FloatProperty
+from bpy.props import FloatProperty, StringProperty
 from bpy.types import Operator
 
 
