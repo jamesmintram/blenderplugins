@@ -35,7 +35,7 @@ def load_headers(file_data, file_position):
 def load_verts(file_data, headers, scale_factor):
     def vert_from_pack(vert_data):
         return (
-                (vert_data[0] / scale_factor, vert_data[1] / scale_factor, vert_data[2] / scale_factor,), #XYZ
+                (-vert_data[0] * scale_factor, vert_data[1] * scale_factor, vert_data[2] * scale_factor,), #XYZ
                 (vert_data[3], vert_data[4],), #UV1
                 (vert_data[5], vert_data[6],), #UV2
                 (vert_data[7], vert_data[8], vert_data[9],), #Normal
@@ -47,6 +47,8 @@ def load_verts(file_data, headers, scale_factor):
     vert_size = vert_chunk.size
     vert_count = int(vert_length / vert_size)
 
+    
+
     print ("Found {} vertices".format(vert_count))
 
     vertices = []
@@ -55,7 +57,7 @@ def load_verts(file_data, headers, scale_factor):
         vert_file_position = vert_offset + current_vert_idx * vert_size
         current_vert = vert_chunk.unpack(file_data[vert_file_position : vert_file_position+vert_size])
         vertices.append(vert_from_pack(current_vert))
-    
+
     return vertices
 
 def load_indices(file_data, headers):    
@@ -113,11 +115,12 @@ def vertex_stream(vertices, stream_id):
     for vertex in vertices:
         yield vertex[stream_id]
 
-def create_mesh_from_data(mesh_name, bsp_verts, bsp_faces):
+def create_mesh_from_data(mesh_name, bsp_verts, bsp_faces, scale_factor):
     # Create mesh and object
     me = bpy.data.meshes.new(mesh_name+'Mesh')
-    ob = bpy.data.objects.new(mesh_name, me)
+    ob = bpy.data.objects.new("LEVEL" + mesh_name, me)
     ob.show_name = True
+    ob['scale_factor'] = scale_factor
 
     # Link object to scene
     bpy.context.scene.objects.link(ob)
@@ -146,7 +149,7 @@ def read_some_data(context, filepath, scale_factor):
     verts = load_verts(data, chunk_headers, scale_factor)
     indices = load_indices(data, chunk_headers)
     faces = load_faces(data, chunk_headers, indices)
-    create_mesh_from_data("NewLevel", verts, faces)
+    create_mesh_from_data("NewLevel", verts, faces, scale_factor)
 
     return {'FINISHED'}
 
@@ -177,8 +180,8 @@ class ImportSomeData(Operator, ImportHelper):
     # to the class instance from the operator settings before calling.
     scale_factor = FloatProperty(
             name="Scale factor",
-            description="Scale Factor (1/X)",
-            default=50.0,
+            description="Scale Factor ",
+            default=0.02,
             )
 
     def execute(self, context):

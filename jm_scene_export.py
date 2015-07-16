@@ -10,10 +10,20 @@ bl_info = {
     "category": "Export",
 }
 
+#How scaled is the blender representation vs IOS
+blender_scale_factor = 10
 
 output_objects =[   ("Cameras", "CAMERA",), 
-                    ("Props", "PROP",)]
+                    ("Props", "PROP",),
+                    ("Levels", "LEVEL",),]
 
+def swizzle(obj):
+    obj['location'] = (obj['location'][0], -obj['location'][2], -obj['location'][1],)
+    return obj
+
+def scale_location(obj, scale_factor):
+    obj['location'] = list(map(lambda x: x / scale_factor, obj['location']))
+    return obj
 
 def get_custom_properties(obj):
     return dict([(K, obj[K]) for K in obj.keys() if K not in '_RNA_UI'])
@@ -34,14 +44,28 @@ def get_tagged_object_data(object_tag):
 
     return object_data  
 
+def get_level_scale_factor():
+    level_objects = get_tagged_objects("LEVEL")
+    if len(level_objects) > 0 and 'scale_factor' in level_objects[0]:
+        return level_objects[0]['scale_factor']
+    else:
+        return 1
 
 def write_some_data(context, filepath, use_some_setting):
-    print("Exporting to file")
+    #Write this as meta data
+    export_scale_factor = get_level_scale_factor()
+
+    print("Exporting to file using scale {}".format(export_scale_factor))
     
     output_data = {}
 
     for current_object_type in output_objects:
-        output_data[current_object_type[0]] = get_tagged_object_data(current_object_type[1])
+        scale = lambda x: swizzle(scale_location(x, blender_scale_factor))
+        objects = get_tagged_object_data(current_object_type[1])
+
+        output_data[current_object_type[0]] = list(map(scale, objects))
+
+    print (output_data)
 
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump( output_data, f, sort_keys=True, indent=4, )
