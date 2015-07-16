@@ -53,22 +53,27 @@ def get_level_scale_factor():
 
 def write_some_data(context, filepath, use_some_setting):
     #Write this as meta data
-    export_scale_factor = get_level_scale_factor()
-
-    print("Exporting to file using scale {}".format(export_scale_factor))
+    level_scale_factor = get_level_scale_factor()
     
-    output_data = {}
+    object_data = {}
 
     for current_object_type in output_objects:
         scale = lambda x: swizzle(scale_location(x, blender_scale_factor))
         objects = get_tagged_object_data(current_object_type[1])
 
-        output_data[current_object_type[0]] = list(map(scale, objects))
+        object_data[current_object_type[0]] = list(map(scale, objects))
 
-    print (output_data)
+    level_meta_data = {
+        "scales": {
+            "import_scale": level_scale_factor,
+            #Used for validating - or possibly rescaling (Although the file should be exported correctly)
+            "blender_scale": blender_scale_factor   
+        },
+        "objects": object_data
+    }
 
     with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump( output_data, f, sort_keys=True, indent=4, )
+        json.dump( level_meta_data, f, sort_keys=True, indent=4, )
     
     return {'FINISHED'}
 
