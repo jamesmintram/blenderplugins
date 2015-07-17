@@ -35,7 +35,7 @@ def load_headers(file_data, file_position):
 def load_verts(file_data, headers, scale_factor):
     def vert_from_pack(vert_data):
         return (
-                (-vert_data[0] * scale_factor, vert_data[1] * scale_factor, vert_data[2] * scale_factor,), #XYZ
+                (vert_data[0] * scale_factor, vert_data[1] * scale_factor, vert_data[2] * scale_factor,), #XYZ
                 (vert_data[3], vert_data[4],), #UV1
                 (vert_data[5], vert_data[6],), #UV2
                 (vert_data[7], vert_data[8], vert_data[9],), #Normal
