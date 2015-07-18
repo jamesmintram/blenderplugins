@@ -69,7 +69,29 @@ def load_indices(file_data, headers):
 
     return index_chunk.unpack(file_data[index_offset:index_offset+index_length])
 
+def load_materials(file_data, headers):
+    def material_from_pack(material):
+        return (
+            material[0].decode("utf-8"),
+        )
+    """
+        string[64] name Texture name.
+        int flags   Surface flags.
+        int contents    Content flags.
+    """
+    texture_offset, texture_length = headers[1]
+    texture_chunk = Struct("64sii") 
+    texture_size = texture_chunk.size
+    texture_count = int(texture_length / texture_size)
 
+    textures = []
+    for current_texture_idx in range(texture_count):
+        texture_file_position = texture_offset + current_texture_idx * texture_size
+        packed_texture = texture_chunk.unpack(file_data[texture_file_position : texture_file_position+texture_size])
+        current_texture = material_from_pack(packed_texture)
+        textures.append(current_texture)
+    
+    return textures
 
 def load_faces(file_data, headers, indices):
     def indices_from_face(face_data):
@@ -90,7 +112,7 @@ def load_faces(file_data, headers, indices):
     def face_from_pack(face_data):
         return (
                 face_data[0],   #Texture
-                indices_from_face(face_data)
+                indices_from_face(face_data),
             )
 
     face_offset, face_length = headers[13]
@@ -115,7 +137,7 @@ def vertex_stream(vertices, stream_id):
     for vertex in vertices:
         yield vertex[stream_id]
 
-def create_mesh_from_data(mesh_name, bsp_verts, bsp_faces, scale_factor):
+def create_mesh_from_data(mesh_name, bsp_verts, bsp_faces, materials, scale_factor):
     # Create mesh and object
     me = bpy.data.meshes.new(mesh_name+'Mesh')
     ob = bpy.data.objects.new("LEVEL" + mesh_name, me)
@@ -131,10 +153,29 @@ def create_mesh_from_data(mesh_name, bsp_verts, bsp_faces, scale_factor):
     me.from_pydata(list(vertex_stream(bsp_verts, 0)), [], triangles)
 
     # Update mesh with new data
+    
     me.update()
+    me.materials.append(materials[0])
+
     return ob
 
+def create_materials_from_data(textures):
+    materials = []
 
+    for current_material in textures:
+        mat = bpy.data.materials.new(str(current_material[0]))
+        mat.diffuse_color = (1, 0, 0,)
+        mat.diffuse_shader = 'LAMBERT' 
+        mat.diffuse_intensity = 1.0 
+        mat.specular_color = (1, 1, 1,)
+        mat.specular_shader = 'COOKTORR'
+        mat.specular_intensity = 0.5
+        mat.alpha = 1
+        mat.ambient = 1
+
+        materials.append(mat)
+        
+    return materials
 
 def read_some_data(context, filepath, scale_factor):
 
@@ -149,7 +190,10 @@ def read_some_data(context, filepath, scale_factor):
     verts = load_verts(data, chunk_headers, scale_factor)
     indices = load_indices(data, chunk_headers)
     faces = load_faces(data, chunk_headers, indices)
-    create_mesh_from_data("NewLevel", verts, faces, scale_factor)
+    textures = load_materials(data, chunk_headers)
+
+    materials = create_materials_from_data (textures)
+    create_mesh_from_data("NewLevel", verts, faces, materials, scale_factor)
 
     return {'FINISHED'}
 
