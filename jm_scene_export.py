@@ -1,3 +1,8 @@
+"""
+    TODO:
+    Export material properties - allow additional stuff like normal maps, or texture change 
+"""
+
 import bpy
 import json
 
