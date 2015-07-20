@@ -15,6 +15,10 @@ bl_info = {
     "category": "Export",
 }
 
+reserved_properties = (
+        'cycles_visibility'
+    )
+
 #How scaled is the blender representation vs IOS
 blender_scale_factor = 10
 
@@ -31,12 +35,19 @@ def scale_location(obj, scale_factor):
     return obj
 
 def get_custom_properties(obj):
-    return dict([(K, obj[K]) for K in obj.keys() if K not in '_RNA_UI'])
+    return dict([(K, obj[K]) for K in obj.keys() if K not in '_RNA_UI' and not K in reserved_properties])
 
 
 def get_tagged_objects(object_tag):
     return [obj for obj in bpy.data.objects if obj.name.find(object_tag) == 0]
 
+def process_material(material):
+    return {
+        "name": material.name
+    }
+def get_material_info(obj):
+    materials = [process_material(current_material) for current_material in obj.data.materials]
+    return materials
 
 def get_tagged_object_data(object_tag):
     objects = get_tagged_objects(object_tag)
@@ -57,7 +68,7 @@ def get_level_scale_factor():
         return 1
 
 def write_some_data(context, filepath, use_some_setting):
-    #Write this as meta data
+    # Write this as meta data
     level_scale_factor = get_level_scale_factor()
     
     object_data = {}
@@ -68,13 +79,21 @@ def write_some_data(context, filepath, use_some_setting):
 
         object_data[current_object_type[0]] = list(map(scale, objects))
 
+    # Export the material data associated with the level - order is maintained
+    levels = get_tagged_objects('LEVEL')
+    if len(levels) != 1:
+        raise Exception("Cannot handle more than 1 level in a scene")
+    
+    materials = get_material_info (levels[0])
+
     level_meta_data = {
         "scales": {
             "import_scale": level_scale_factor,
             #Used for validating - or possibly rescaling (Although the file should be exported correctly)
             "blender_scale": blender_scale_factor   
         },
-        "objects": object_data
+        "objects": object_data,
+        "materials": materials
     }
 
     with open(filepath, 'w', encoding='utf-8') as f:
