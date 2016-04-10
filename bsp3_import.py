@@ -332,7 +332,7 @@ from bpy.types import Operator
 class ImportSomeData(Operator, ImportHelper):
     """Import a Quake 3 BSP level"""
     bl_idname = "import_test.some_data"  # important since its how bpy.ops.import_test.some_data is constructed
-    bl_label = "Import a Quak3 BSP"
+    bl_label = "Import a Quake3 BSP"
 
     # ImportHelper mixin class uses this
     filename_ext = ".bsp"
@@ -357,7 +357,7 @@ class ImportSomeData(Operator, ImportHelper):
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
-    self.layout.operator(ImportSomeData.bl_idname, text="Text Import Operator")
+    self.layout.operator(ImportSomeData.bl_idname, text="Quake 3 BSP Import")
 
 
 def register():
