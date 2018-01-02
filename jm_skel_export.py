@@ -1,5 +1,7 @@
 import bpy
 import math
+import mathutils
+from bpy_extras.io_utils import axis_conversion
 
 bl_info = {
     "name": "Export JM's Skeleton",
@@ -14,26 +16,72 @@ reserved_properties = (
         'cycles_visibility'
     )
 
-
 def ProcessBone(armature, bone, bone_array, parent_id, depth = 0):
     my_id = len(bone_array)
-    loc, quat, sca = bone.matrix_local.decompose()
+
+    # bone_matrix = bone.matrix_local.inverted()
+    # change_base = axis_conversion(
+    #     from_forward = '-Y', 
+    #     from_up='Z', 
+    #     to_forward='Z', 
+    #     to_up='Y').to_4x4()
+
+    # print (str(change_base))
+
+    change_base = mathutils.Matrix([
+        [1, 0, 0, 0],
+        [0, 0, 1, 0],
+        [0, -1, 0, 0],
+        [0, 0, 0, 1]])
+
+    transform = bone.matrix_local.copy() 
+    parentBone = bone.parent
+
+    if parentBone:
+        transform =  parentBone.matrix_local.inverted() * transform
+
+    # test = parentBone.matrix_local * bone.matrix_local
+    # test = bone.matrix_local.copy()
+    print (bone.name)
+    print (str(transform.transposed()))
+    print (str((change_base * transform).transposed()))
+    # print ("LocalToParent: \n" + str(transform.transposed()))
+    # print ("LocalToWorld: \n" + str(bone.matrix_local.transposed()))
+    # print (str(transform * mathutils.Vector([0, 0, 0, 1])))
+    # if parentBone:
+    #    print (str(parentBone.matrix_local * transform * mathutils.Vector([0, 0, 0, 1])))
+    print('------------------------------------------------------\n')
+
+
+    # transform = change_base * transform 
+
+    # transform = transform.transposed()
+
+    loc, quat, sca = transform.decompose()
 
     bone_data = {
         "parent": parent_id,
         "loc": loc,
         "rot": quat,
+        "mat": transform,
         "name": bone.name
     }
 
     bone_array.append(bone_data)
 
-    print ("{:<32} ID: {:>4}  Parent: {:>4}  Tran: {:40}  Rot: {:32}".format(
-            '-' * depth + bone.name,
-            my_id,
-            parent_id,
-            str(loc),
-            str(quat)))
+
+    # print ("{:<32} ID: {:>4}  Parent: {:>4}  Mat: \n{} ".format(
+    #         '-' * depth + bone.name,
+    #         my_id,
+    #         parent_id,
+    #         str(transform.transposed())))
+
+    # print ("{:<32} ID: {:>4}  Parent: {:>4}  Tran: {:40}  Rot: {:32}".format(
+    #         '-' * depth + bone.name,
+    #         my_id,
+    #         parent_id,
+    #         str(loc),
+    #         str(quat)))
 
     for subnode in bone.children:
         ProcessBone(armature, subnode, bone_array, my_id, depth + 1)
@@ -109,6 +157,17 @@ def FormatVec3(vec3, prefix=''):
         vec3.y,
         vec3.z)
 
+def FormatMat4(mat4, prefix=''):
+    attr_str = ''
+    for i in range(4):
+        for j in range(4):
+            attr_str += ' {}{}{}="{}" '.format(
+                prefix, 
+                i, j, 
+                FormatArg(mat4[j][i]))
+
+    return attr_str
+
 def Write(file, text, *args):
     formatted_text = FormatText(text, *args)
 
@@ -122,9 +181,10 @@ def skeleton_write(file, skeleton):
         skeleton['name'])
 
     for bone in skeleton['bones']:
-        Write(file, '    <bone {} {} parent="{}" name="{}"/>\n',
+        Write(file, '    <bone {} {} {} parent="{}" name="{}"/>\n',
                 FormatQuat(bone['rot'], 'rot_'),
                 FormatVec3(bone['loc'], 'loc_'),
+                FormatMat4(bone['mat'], 'mat_'),
                 bone['parent'],
                 bone['name'])
     
